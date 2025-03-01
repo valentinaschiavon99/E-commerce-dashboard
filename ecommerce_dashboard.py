@@ -2,6 +2,7 @@
 # This project analyzes and visualizes eCommerce sales data using Streamlit
 
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
@@ -25,13 +26,16 @@ else:
     }
     df = pd.DataFrame(data)
 
+# Ensure Date column is in datetime format
+df['Date'] = pd.to_datetime(df['Date'])
+
 # Display dataframe
 st.write("### Sales Data Preview", df.head())
 
 # Calculate key performance indicators (KPIs)
 average_sales = df['Sales'].mean()
 max_sales = df['Sales'].max()
-best_day = df[df['Sales'] == max_sales]['Date'].values[0]
+best_day = df.loc[df['Sales'].idxmax(), 'Date']  # Fetches the correct best day
 
 total_sales = df['Sales'].sum()
 num_days = df.shape[0]
@@ -63,3 +67,4 @@ st.pyplot(fig)
 
 st.write("---")
 st.write("💡 Upload your own CSV file to analyze real sales data!")
+
