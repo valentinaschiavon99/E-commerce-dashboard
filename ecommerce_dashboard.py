@@ -5,66 +5,51 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import streamlit as st
+import plotly.express as px
 
-# Streamlit page configuration
-st.set_page_config(page_title="eCommerce Dashboard", layout="wide")
-
-# Title
+# Page Title
+st.set_page_config(page_title="eCommerce Sales Dashboard", layout="wide")
 st.title("📊 eCommerce Sales Dashboard")
 
-# File uploader
+# Upload CSV file
 uploaded_file = st.file_uploader("Upload a CSV file with sales data", type=["csv"])
 
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file, parse_dates=["Date"])
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    df['Date'] = pd.to_datetime(df['Date'])
+    
+    # Sidebar Date Filter
+    st.sidebar.header("Filter Data")
+    start_date = st.sidebar.date_input("Start Date", df['Date'].min())
+    end_date = st.sidebar.date_input("End Date", df['Date'].max())
+    
+    df_filtered = df[(df['Date'] >= pd.to_datetime(start_date)) & (df['Date'] <= pd.to_datetime(end_date))]
+    
+    # KPI Metrics
+    total_sales = df_filtered['Sales'].sum()
+    avg_sales = df_filtered['Sales'].mean()
+    best_day = df_filtered.loc[df_filtered['Sales'].idxmax(), 'Date']
+    growth = ((df_filtered['Sales'].iloc[-1] - df_filtered['Sales'].iloc[0]) / df_filtered['Sales'].iloc[0]) * 100
+    
+    # KPI Display
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("💰 Total Sales", f"€{total_sales:,.0f}")
+    col2.metric("📈 Avg Daily Sales", f"€{avg_sales:.2f}")
+    col3.metric("🏆 Best Sales Day", best_day.strftime('%Y-%m-%d'))
+    col4.metric("📊 Sales Growth", f"{growth:.2f}%")
+    
+    # Sales Trend Plot
+    fig1 = px.line(df_filtered, x='Date', y='Sales', markers=True, title="Sales Trend Over Time")
+    st.plotly_chart(fig1, use_container_width=True)
+    
+    # Sales Distribution
+    fig2, ax = plt.subplots()
+    sns.histplot(df_filtered['Sales'], kde=True, color="blue", alpha=0.5, ax=ax)
+    ax.set_title("Sales Distribution")
+    st.pyplot(fig2)
+    
+    # Display filtered data
+    st.subheader("Filtered Data Preview")
+    st.dataframe(df_filtered)
 else:
-    # Sample sales data (for demo purposes)
-    data = {
-        'Date': pd.date_range(start='2024-01-01', periods=10, freq='D'),
-        'Sales': [150, 200, 250, 180, 220, 300, 280, 260, 310, 400]
-    }
-    df = pd.DataFrame(data)
-
-# Ensure Date column is in datetime format
-df['Date'] = pd.to_datetime(df['Date'])
-
-# Display dataframe
-st.write("### Sales Data Preview", df.head())
-
-# Calculate key performance indicators (KPIs)
-average_sales = df['Sales'].mean()
-max_sales = df['Sales'].max()
-best_day = df.loc[df['Sales'].idxmax(), 'Date']  # Fetches the correct best day
-
-total_sales = df['Sales'].sum()
-num_days = df.shape[0]
-
-# Display KPIs
-st.write("### Key Performance Indicators")
-st.metric(label="📈 Total Sales", value=f"€{total_sales:,}")
-st.metric(label="📊 Average Daily Sales", value=f"€{average_sales:.2f}")
-st.metric(label="🏆 Best Sales Day", value=best_day.strftime('%Y-%m-%d'))
-
-# Sales trend visualization
-st.write("### Sales Trend Over Time")
-fig, ax = plt.subplots(figsize=(10, 5))
-sns.lineplot(x='Date', y='Sales', data=df, marker='o', linewidth=2, ax=ax)
-ax.set_xlabel("Date")
-ax.set_ylabel("Sales (€)")
-ax.set_title("Sales Trend")
-ax.grid(True)
-st.pyplot(fig)
-
-# Sales distribution
-st.write("### Sales Distribution")
-fig, ax = plt.subplots(figsize=(8, 5))
-sns.histplot(df['Sales'], bins=5, kde=True, color='blue', ax=ax)
-ax.set_xlabel("Sales (€)")
-ax.set_ylabel("Frequency")
-ax.set_title("Sales Distribution")
-st.pyplot(fig)
-
-st.write("---")
-st.write("💡 Upload your own CSV file to analyze real sales data!")
-
+    st.info("Please upload a CSV file to analyze the sales data.")
